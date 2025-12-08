@@ -4,7 +4,20 @@ import time
 import random
 from datetime import datetime
 
-# ======== Konfigurasi API v2 ========
+# ======== Cek environment variable ========
+required_vars = [
+    "BEARER_TOKEN", 
+    "API_KEY", 
+    "API_SECRET", 
+    "ACCESS_TOKEN", 
+    "ACCESS_TOKEN_SECRET"
+]
+
+for var in required_vars:
+    if not os.getenv(var):
+        raise ValueError(f"[ERROR] Environment variable {var} belum diset!")
+
+# ======== Konfigurasi API ========
 bearer_token = os.getenv("BEARER_TOKEN")
 api_key = os.getenv("API_KEY")
 api_secret = os.getenv("API_SECRET")
@@ -23,8 +36,9 @@ BASE_FOLDER = "queue_bot"
 os.makedirs(BASE_FOLDER, exist_ok=True)
 QUEUE_FILE = os.path.join(BASE_FOLDER, "queue.txt")
 LOG_FILE = os.path.join(BASE_FOLDER, "log.txt")
+LAST_SEEN_FILE = os.path.join(BASE_FOLDER, "last_seen_id.txt")
 
-for f in [QUEUE_FILE, LOG_FILE]:
+for f in [QUEUE_FILE, LOG_FILE, LAST_SEEN_FILE]:
     if not os.path.exists(f):
         open(f, "w", encoding="utf-8").close()
 
@@ -51,25 +65,26 @@ def log_post(status, username, user_id, tweet_id, teks):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"{timestamp}|{status}|{username}|{user_id}|{tweet_id}|{teks}\n")
 
-# ======== Ambil mention baru via v2 ========
-last_seen_id_file = os.path.join(BASE_FOLDER, "last_seen_id.txt")
-if not os.path.exists(last_seen_id_file):
-    with open(last_seen_id_file, "w") as f:
-        f.write("0")
-
+# ======== Last seen ========
 def get_last_seen_id():
-    with open(last_seen_id_file, "r") as f:
-        return int(f.read().strip())
+    with open(LAST_SEEN_FILE, "r") as f:
+        val = f.read().strip()
+        return int(val) if val else 0
 
 def set_last_seen_id(tweet_id):
-    with open(last_seen_id_file, "w") as f:
+    with open(LAST_SEEN_FILE, "w") as f:
         f.write(str(tweet_id))
 
+# ======== Ambil mention baru via v2 ========
 def check_mentions():
     last_seen_id = get_last_seen_id()
     try:
-        # dapatkan 20 mention terbaru
-        mentions = client_v2.get_users_mentions(id=client_v2.get_me().data.id, since_id=last_seen_id, max_results=20, tweet_fields=["referenced_tweets"])
+        mentions = client_v2.get_users_mentions(
+            id=client_v2.get_me().data.id,
+            since_id=last_seen_id,
+            max_results=20,
+            tweet_fields=["referenced_tweets"]
+        )
         if not mentions.data:
             return
         for mention in reversed(mentions.data):
@@ -77,13 +92,13 @@ def check_mentions():
             user_id = mention.author_id
             username = client_v2.get_user(id=user_id).data.username
 
-            # Ambil tweet yang di-reply jika ada
+            # Ambil teks tweet asli jika reply
             teks_asli = mention.text
             if mention.referenced_tweets:
                 ref = mention.referenced_tweets[0]
                 if ref.type == "replied_to":
                     try:
-                        parent_tweet = client_v2.get_tweet(ref.id, tweet_fields=["text", "author_id"])
+                        parent_tweet = client_v2.get_tweet(ref.id, tweet_fields=["text"])
                         teks_asli = parent_tweet.data.text
                     except:
                         pass
@@ -91,7 +106,6 @@ def check_mentions():
             teks_baru = ubah_vokal_dan_random_caps(teks_asli)
             add_to_queue(username, user_id, tweet_id, teks_baru)
             set_last_seen_id(tweet_id)
-
     except Exception as e:
         print(f"[ERROR] Gagal cek mentions: {e}")
 
@@ -120,7 +134,6 @@ def process_queue(max_batch=5):
             except Exception as e:
                 print(f"[ERROR] Gagal posting @{username}: {e}")
                 new_lines.append(line)
-        # Update queue
         with open(QUEUE_FILE, "w", encoding="utf-8") as f:
             for l in new_lines:
                 f.write(l + "\n")
