@@ -1,17 +1,22 @@
-import tweepy
 import os
+import tweepy
 import time
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# ======== Konfigurasi API ========
+# ======== Konfigurasi API v2 ========
+bearer_token = os.getenv("BEARER_TOKEN")
 api_key = os.getenv("API_KEY")
 api_secret = os.getenv("API_SECRET")
 access_token = os.getenv("ACCESS_TOKEN")
 access_token_secret = os.getenv("ACCESS_TOKEN_SECRET")
 
+# OAuth1 untuk posting tweet
 auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_secret)
 api = tweepy.API(auth)
+
+# Client v2 untuk baca mention
+client_v2 = tweepy.Client(bearer_token=bearer_token)
 
 # ======== Folder & file ========
 BASE_FOLDER = "queue_bot"
@@ -46,25 +51,49 @@ def log_post(status, username, user_id, tweet_id, teks):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"{timestamp}|{status}|{username}|{user_id}|{tweet_id}|{teks}\n")
 
-# ======== Ambil mention baru ========
-last_seen_id = 1
+# ======== Ambil mention baru via v2 ========
+last_seen_id_file = os.path.join(BASE_FOLDER, "last_seen_id.txt")
+if not os.path.exists(last_seen_id_file):
+    with open(last_seen_id_file, "w") as f:
+        f.write("0")
+
+def get_last_seen_id():
+    with open(last_seen_id_file, "r") as f:
+        return int(f.read().strip())
+
+def set_last_seen_id(tweet_id):
+    with open(last_seen_id_file, "w") as f:
+        f.write(str(tweet_id))
+
 def check_mentions():
-    global last_seen_id
+    last_seen_id = get_last_seen_id()
     try:
-        mentions = api.mentions_timeline(since_id=last_seen_id, tweet_mode="extended")
-        for mention in reversed(mentions):
-            last_seen_id = mention.id
-            parent_id = mention.in_reply_to_status_id
-            if not parent_id:
-                continue
-            try:
-                parent = api.get_status(parent_id, tweet_mode="extended")
-                teks_baru = ubah_vokal_dan_random_caps(parent.full_text)
-                add_to_queue(mention.user.screen_name, mention.user.id_str, parent.id, teks_baru)
-            except Exception as e:
-                print(f"[ERROR] Gagal ambil tweet parent @{mention.user.screen_name}: {e}")
+        # dapatkan 20 mention terbaru
+        mentions = client_v2.get_users_mentions(id=client_v2.get_me().data.id, since_id=last_seen_id, max_results=20, tweet_fields=["referenced_tweets"])
+        if not mentions.data:
+            return
+        for mention in reversed(mentions.data):
+            tweet_id = mention.id
+            user_id = mention.author_id
+            username = client_v2.get_user(id=user_id).data.username
+
+            # Ambil tweet yang di-reply jika ada
+            teks_asli = mention.text
+            if mention.referenced_tweets:
+                ref = mention.referenced_tweets[0]
+                if ref.type == "replied_to":
+                    try:
+                        parent_tweet = client_v2.get_tweet(ref.id, tweet_fields=["text", "author_id"])
+                        teks_asli = parent_tweet.data.text
+                    except:
+                        pass
+
+            teks_baru = ubah_vokal_dan_random_caps(teks_asli)
+            add_to_queue(username, user_id, tweet_id, teks_baru)
+            set_last_seen_id(tweet_id)
+
     except Exception as e:
-        print(f"[ERROR] Gagal cek mention: {e}")
+        print(f"[ERROR] Gagal cek mentions: {e}")
 
 # ======== Proses queue (posting baru) ========
 def process_queue(max_batch=5):
@@ -82,7 +111,6 @@ def process_queue(max_batch=5):
                 continue
             try:
                 timestamp, username, user_id, tweet_id, teks = line.split("|", 4)
-                # Post tweet baru dengan mention + link
                 postingan = f"@{username} {teks}\nLink asli: https://twitter.com/i/web/status/{tweet_id}"
                 api.update_status(postingan)
                 print(f"[OK] Berhasil posting @{username}")
