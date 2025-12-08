@@ -13,77 +13,86 @@ ACCESS_TOKEN_SECRET = "iAwbusG6H3mkw6PqtnkfML60K63ewGHVRnnSCBJoiom3H"
 
 USERNAME_BOT = "dixpyc"  # tanpa '@'
 
+# --------------------------------------------------
+# === SISTEM FILE QUEUE DAN LAST ID ===
+# --------------------------------------------------
+
 QUEUE_FILE = "queue.txt"
 LAST_ID_FILE = "last_id.txt"
 
-# ==========================================================
-#     AUTH V1 (Posting Tweet)
-# ==========================================================
-auth = tweepy.OAuth1UserHandler(
-    API_KEY,
-    API_SECRET,
-    ACCESS_TOKEN,
-    ACCESS_TOKEN_SECRET
-)
-api_v1 = tweepy.API(auth)
+if not os.path.exists(QUEUE_FILE):
+    open(QUEUE_FILE, "w").close()
 
-# ==========================================================
-#     AUTH V2 (Mention Checker)
-# ==========================================================
-client_v2 = tweepy.Client(
-    bearer_token=BEARER_TOKEN,
-    consumer_key=API_KEY,
-    consumer_secret=API_SECRET,
-    access_token=ACCESS_TOKEN,
-    access_token_secret=ACCESS_TOKEN_SECRET,
-    wait_on_rate_limit=False
-)
+if not os.path.exists(LAST_ID_FILE):
+    open(LAST_ID_FILE, "w").close()
 
-# ----------------------------------------------------------
-#  Fungsi Random Huruf Kapital + Ubah Vokal ke "i"
-# ----------------------------------------------------------
-def ubah_vokal_random_caps(teks):
+
+# --------------------------------------------------
+# === TEKS PROCESSOR: VOKAL → i + RANDOM CAPS ===
+# --------------------------------------------------
+
+def ubah_vokal(teks):
+    vokal = "aiueoAIUEO"
     hasil = ""
-    for ch in teks:
-        if ch.lower() in ["a", "i", "u", "e", "o"]:
-            ch = "i"
-        if random.random() > 0.5:
-            ch = ch.upper()
+    for c in teks:
+        if c in vokal:
+            hasil += "i" if c.islower() else "I"
         else:
-            ch = ch.lower()
-        hasil += ch
+            hasil += c
     return hasil
 
-# ----------------------------------------------------------
-#  Utility: Queue System
-# ----------------------------------------------------------
-def add_to_queue(username, user_id, tweet_id, processed_text, original_url):
-    with open(QUEUE_FILE, "a", encoding="utf8") as f:
-        f.write(f"{username}|{user_id}|{tweet_id}|{processed_text}|{original_url}\n")
+def random_caps(teks):
+    out = ""
+    for c in teks:
+        if c.isalpha():
+            out += c.upper() if random.random() < 0.5 else c.lower()
+        else:
+            out += c
+    return out
 
-def read_queue():
-    if not os.path.exists(QUEUE_FILE):
-        return []
-    with open(QUEUE_FILE, "r", encoding="utf8") as f:
+def proses_teks_full(teks):
+    return random_caps(ubah_vokal(teks))
+
+
+# --------------------------------------------------
+# === QUEUE SYSTEM ===
+# --------------------------------------------------
+
+def add_to_queue(username, user_id, original_id, text):
+    with open(QUEUE_FILE, "a", encoding="utf-8") as f:
+        entry = {
+            "username": username,
+            "user_id": user_id,
+            "tweet_id": original_id,
+            "text": text
+        }
+        f.write(json.dumps(entry) + "\n")
+    print(f"[QUEUE] Ditambahkan → @{username} : {text[:30]}...")
+
+def pop_queue():
+    with open(QUEUE_FILE, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    return [line.strip() for line in lines if line.strip()]
 
-def remove_first_queue():
-    lines = read_queue()
     if not lines:
-        return
-    with open(QUEUE_FILE, "w", encoding="utf8") as f:
+        return None
+
+    first = json.loads(lines[0])
+
+    with open(QUEUE_FILE, "w", encoding="utf-8") as f:
         f.writelines(lines[1:])
 
-# ----------------------------------------------------------
-#  Save & Load last seen ID
-# ----------------------------------------------------------
+    return first
+
+
+# --------------------------------------------------
+# === LAST SEEN ID SYSTEM ===
+# --------------------------------------------------
+
 def get_last_seen_id():
-    if not os.path.exists(LAST_ID_FILE):
-        return None
     try:
         with open(LAST_ID_FILE, "r") as f:
-            return f.read().strip()
+            data = f.read().strip()
+            return int(data) if data else None
     except:
         return None
 
@@ -91,137 +100,115 @@ def set_last_seen_id(tweet_id):
     with open(LAST_ID_FILE, "w") as f:
         f.write(str(tweet_id))
 
-# ----------------------------------------------------------
-#  STEP 1 — Cek Mention via Endpoint Mentions
-# ----------------------------------------------------------
-def check_mentions_primary():
-    print("[INFO] Cek mentions (primary)...")
+
+# --------------------------------------------------
+# === AUTH API ===
+# --------------------------------------------------
+
+# v2: read
+client_v2 = tweepy.Client(
+    bearer_token=BEARER_TOKEN,
+    consumer_key=API_KEY,
+    consumer_secret=API_SECRET,
+    access_token=ACCESS_TOKEN,
+    access_token_secret=ACCESS_TOKEN_SECRET
+)
+
+# v1: write
+auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+client_v1 = tweepy.API(auth)
+
+
+# --------------------------------------------------
+# === HANYA CEK MENTIONS (TANPA FALLBACK) ===
+# --------------------------------------------------
+
+def check_mentions():
+    print("[SCAN] Mengecek mentions...")
+
+    last_id = get_last_seen_id()
 
     try:
-        last_id = get_last_seen_id()
-        me = client_v2.get_me().data.id
-
         mentions = client_v2.get_users_mentions(
-            id=me,
+            id=client_v2.get_me().data.id,
             since_id=last_id,
             max_results=10,
-            tweet_fields=["referenced_tweets"]
+            tweet_fields=["author_id", "referenced_tweets", "text"]
         )
-
-        if not mentions.data:
-            return False  # tidak ada data baru
-
-        for mention in reversed(mentions.data):
-            t_id = mention.id
-            u_id = mention.author_id
-            username = client_v2.get_user(id=u_id).data.username
-
-            teks_asli = mention.text
-
-            # ambil tweet yg direply
-            if mention.referenced_tweets:
-                ref = mention.referenced_tweets[0]
-                if ref.type == "replied_to":
-                    parent = client_v2.get_tweet(ref.id, tweet_fields=["text"])
-                    teks_asli = parent.data.text
-
-            hasil = ubah_vokal_random_caps(teks_asli)
-            tweet_url = f"https://twitter.com/{username}/status/{t_id}"
-
-            add_to_queue(username, u_id, t_id, hasil, tweet_url)
-            set_last_seen_id(t_id)
-
-        return True
 
     except tweepy.TooManyRequests:
-        print("[429] Limit endpoint mentions — switching to fallback search...")
-        return None
-
-    except Exception as e:
-        print(f"[ERROR] Mentions primary gagal: {e}")
-        return None
-
-# ----------------------------------------------------------
-#  STEP 2 — Fallback Search API
-# ----------------------------------------------------------
-def check_mentions_fallback():
-    print("[INFO] Cek mentions (fallback search)...")
-
-    try:
-        query = f"@{USERNAME_BOT} -is:retweet"
-        tweets = client_v2.search_recent_tweets(
-            query=query,
-            max_results=10,
-            tweet_fields=["referenced_tweets", "author_id"]
-        )
-
-        if not tweets.data:
-            return False
-
-        for tw in reversed(tweets.data):
-            t_id = tw.id
-            u_id = tw.author_id
-            username = client_v2.get_user(id=u_id).data.username
-
-            teks_asli = tw.text
-
-            if tw.referenced_tweets:
-                ref = tw.referenced_tweets[0]
-                if ref.type == "replied_to":
-                    parent = client_v2.get_tweet(ref.id, tweet_fields=["text"])
-                    teks_asli = parent.data.text
-
-            hasil = ubah_vokal_random_caps(teks_asli)
-            tweet_url = f"https://twitter.com/{username}/status/{t_id}"
-
-            add_to_queue(username, u_id, t_id, hasil, tweet_url)
-
-        return True
-
-    except Exception as e:
-        print(f"[ERROR] Search fallback gagal: {e}")
-        return False
-
-# ----------------------------------------------------------
-#  STEP 3 — Posting Queue
-# ----------------------------------------------------------
-def process_queue():
-    q = read_queue()
-    if not q:
+        print("[LIMIT] get_users_mentions terkena 429. Menunggu 2 menit...")
+        time.sleep(120)
         return
 
-    item = q[0]
-    username, uid, tid, teks, url = item.split("|", 4)
+    except Exception as e:
+        print("[ERROR] Mention:", e)
+        return
 
-    final_text = f"@{username} {teks}\n\nOriginal Tweet:\n{url}"
+    if not mentions.data:
+        print("[SCAN] Tidak ada mentions baru.")
+        return
+
+    for m in reversed(mentions.data):
+        teks = m.text
+        user_id = m.author_id
+        username = client_v2.get_user(id=user_id).data.username
+
+        # ambil teks parent tweet jika mention adalah reply
+        if m.referenced_tweets:
+            ref = m.referenced_tweets[0]
+            if ref.type == "replied_to":
+                try:
+                    parent = client_v2.get_tweet(ref.id, tweet_fields=["text"])
+                    teks = parent.data.text
+                except:
+                    pass
+
+        hasil = proses_teks_full(teks)
+        add_to_queue(username, user_id, m.id, hasil)
+        set_last_seen_id(m.id)
+
+
+# --------------------------------------------------
+# === PROSES QUEUE DAN POSTING ===
+# --------------------------------------------------
+
+def process_queue():
+    item = pop_queue()
+    if not item:
+        return
+
+    username = item["username"]
+    teks = item["text"]
+    tweet_id = item["tweet_id"]
+
+    tweet_url = f"https://twitter.com/{username}/status/{tweet_id}"
+    final_post = f"@{username} {teks}\n\nSource: {tweet_url}"
 
     try:
-        api_v1.update_status(final_text)
-        print(f"[POSTED] Balasan terkirim ke @{username}")
-        remove_first_queue()
-        time.sleep(3)
-    except tweepy.TweepyException as e:
-        if "429" in str(e):
-            print("[429] Limit posting — tunggu 2 menit...")
-            time.sleep(120)
-        else:
-            print(f"[ERROR POST] {e}")
+        client_v1.update_status(final_post)
+        print(f"[POSTED] → @{username} : {teks[:30]}...")
+        time.sleep(5)
 
-# ----------------------------------------------------------
-#  MAIN LOOP
-# ----------------------------------------------------------
-print("BOT BERJALAN — Anti 429 Mode Aktif")
+    except tweepy.RateLimitError:
+        print("[LIMIT POST] Post terkena limit. Menunggu 2 menit...")
+        add_to_queue(username, item["user_id"], item["tweet_id"], teks)
+        time.sleep(120)
+
+    except Exception as e:
+        print("[ERROR] Post:", e)
+        add_to_queue(username, item["user_id"], item["tweet_id"], teks)
+        time.sleep(30)
+
+
+# --------------------------------------------------
+# === MAIN LOOP (AMAN UNTUK FREE TIER) ===
+# --------------------------------------------------
+
+print("=== BOT TWITTER/X AKTIF (NO FALLBACK) ===")
 
 while True:
-    # Step 1: coba primary mentions
-    result = check_mentions_primary()
-
-    # Step 2: fallback jika limit atau gagal
-    if result is None:
-        check_mentions_fallback()
-
-    # Step 3: proses queue
+    check_mentions()
     process_queue()
-
-    print("[INFO] Sleep 120 detik...")
+    print("[WAIT] 120 detik...\n")
     time.sleep(120)
