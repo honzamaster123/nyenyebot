@@ -11,12 +11,19 @@ API_SECRET = "azfV03WWpHFgEGIC7RXMzczQgMEMtIKvEGQHMpDScbtW7xud7j"
 ACCESS_TOKEN = "1504365905111035905-JFqPbuEb7TlpwLLXcBpHsmcHAOQSHW"
 ACCESS_TOKEN_SECRET = "rbugFTxZB0QY5nVJaxxz0YqNeRqqldafNN5DclrW7Zbc8"
 
-# OAuth1 untuk posting tweet
+# ======== OAuth1 untuk posting tweet ========
 auth = tweepy.OAuthHandler(API_KEY, API_SECRET)
 auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 api = tweepy.API(auth)
-# Client v2 untuk baca mention
-client_v2 = tweepy.Client(bearer_token=BEARER_TOKEN)
+
+# ======== Client v2 untuk membaca mentions ========
+client_v2 = tweepy.Client(
+    consumer_key=API_KEY,
+    consumer_secret=API_SECRET,
+    access_token=ACCESS_TOKEN,
+    access_token_secret=ACCESS_TOKEN_SECRET,
+    bearer_token=BEARER_TOKEN
+)
 
 # ======== Folder & file ========
 BASE_FOLDER = "queue_bot"
