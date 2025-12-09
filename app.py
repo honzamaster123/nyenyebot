@@ -4,7 +4,10 @@ import random
 from datetime import datetime
 import os
 
-# ======== Konfigurasi API ========
+# --------------------------------------------------
+#  =============== KONFIGURASI API ===============
+# --------------------------------------------------
+
 BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAAEwvawEAAAAA48x7h9TUmO03p1DWXNeca1idYJs%3DqkLh2xwwW9fAAGi3goA9n2kj4SOZh9CaUyY1sSb76WEAgWzsTz"
 API_KEY = "c1VvzfhWsMYHiT9t9y7MMKGMc"
 API_SECRET = "mcaZNlj8UWObae7lOCICAGdQPPCX0t2zip3JV1WtYuRZMYYtyq"
@@ -13,7 +16,7 @@ ACCESS_TOKEN_SECRET = "iAwbusG6H3mkw6PqtnkfML60K63ewGHVRnnSCBJoiom3H"
 USERNAME_BOT = "dixpyc"  # tanpa '@'
 
 # --------------------------------------------------
-# === SISTEM FILE QUEUE DAN LAST ID ===
+#  ========= SISTEM FILE QUEUE & LAST ID ==========
 # --------------------------------------------------
 
 QUEUE_FILE = "queue.txt"
@@ -26,7 +29,7 @@ if not os.path.exists(LAST_ID_FILE):
     open(LAST_ID_FILE, "w").close()
 
 # --------------------------------------------------
-# === TEXT PROCESSOR ===
+#  ================ TEXT PROCESSOR ================
 # --------------------------------------------------
 
 def ubah_vokal(teks):
@@ -53,7 +56,7 @@ def proses_teks_full(teks):
 
 
 # --------------------------------------------------
-# === QUEUE SYSTEM ===
+#  ================= QUEUE SYSTEM =================
 # --------------------------------------------------
 
 def add_to_queue(username, user_id, original_id, text):
@@ -83,7 +86,7 @@ def pop_queue():
 
 
 # --------------------------------------------------
-# === LAST ID SYSTEM ===
+#  ================ LAST ID SYSTEM ================
 # --------------------------------------------------
 
 def get_last_seen_id():
@@ -100,7 +103,7 @@ def set_last_seen_id(tweet_id):
 
 
 # --------------------------------------------------
-# === AUTH API ===
+#  =================== AUTH API ===================
 # --------------------------------------------------
 
 client_v2 = tweepy.Client(
@@ -116,7 +119,7 @@ client_v1 = tweepy.API(auth)
 
 
 # --------------------------------------------------
-# === CEK MENTIONS SETIAP 10 MENIT — TANPA FALLBACK ===
+#  ========= CEK MENTIONS SETIAP 10 MENIT =========
 # --------------------------------------------------
 
 def check_mentions():
@@ -165,7 +168,7 @@ def check_mentions():
 
 
 # --------------------------------------------------
-# === POST QUEUE — TANPA FALLBACK ===
+#  ================= POST QUEUE ===================
 # --------------------------------------------------
 
 def process_queue():
@@ -192,7 +195,7 @@ def process_queue():
 
 
 # --------------------------------------------------
-# === MAIN LOOP 10 MENIT (600 DETIK) ===
+#  ======== MAIN LOOP 10 MENIT (600 DETIK) ========
 # --------------------------------------------------
 
 print("=== BOT TWITTER/X AKTIF (INTERVAL 10 MENIT, NO FALLBACK) ===\n")
