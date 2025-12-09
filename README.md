@@ -252,10 +252,3 @@ This project is released under the MIT License — feel free to tweak and remix.
 
 
 ---
-
-🙌 Credits
-
-Made playful by you, polished by me. If you want, I can convert this README into a ready-to-use README.md file (drop-in), or make a nicer badge set, or add GitHub Action CI that lints and tests the repo. Want that?
-
-
----
