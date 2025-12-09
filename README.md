@@ -92,7 +92,7 @@ git push -u origin main
 ```
 
 ### 2. Railway → New Project → Deploy from GitHub  
-### 3. Add Variables App.py:
+### 3. Add Variables `app.py`:
 
 ```
 BEARER_TOKEN=your_token_here
