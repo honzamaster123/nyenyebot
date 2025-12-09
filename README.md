@@ -1,4 +1,4 @@
-# 🐙 **dixpyc — Mention Reply Bot**
+# 🐙 **Mention Reply Bot**
 
 ![banner](example.png)
 
@@ -57,7 +57,7 @@ API_KEY=your_api_key_here
 API_SECRET=your_api_secret_here
 ACCESS_TOKEN=your_access_token_here
 ACCESS_TOKEN_SECRET=your_access_token_secret_here
-USERNAME_BOT=dixpyc
+USERNAME_BOT=your_username_bot_without_@
 ```
 
 Modify `app.py`:
@@ -70,7 +70,7 @@ API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 ACCESS_TOKEN_SECRET = os.getenv("ACCESS_TOKEN_SECRET")
-USERNAME_BOT = os.getenv("USERNAME_BOT", "dixpyc")
+USERNAME_BOT = os.getenv("USERNAME_BOT")
 ```
 
 ---
@@ -105,7 +105,7 @@ API_KEY=
 API_SECRET=
 ACCESS_TOKEN=
 ACCESS_TOKEN_SECRET=
-USERNAME_BOT=dixpyc
+USERNAME_BOT=
 ```
 
 ### 4. Set Start Command:
@@ -152,7 +152,7 @@ example.png
 
 ## 🧾 License
 
-MIT License
+This project is released under the MIT License — feel free to tweak and remix❤️
 
 ---
 
