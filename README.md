@@ -10,4 +10,7 @@ Bot ini akan membalas mention secara otomatis:
 - Queue, backup, dan log otomatis
 - Siap deploy ke Heroku & GitHub
 
+
+example: 
+
 ![example.png](example.png)
