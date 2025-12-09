@@ -1,6 +1,5 @@
 # 🐙 **Mention Reply Bot**
 
-![banner](example.png)
 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](#license)
@@ -8,7 +7,7 @@
 [![Deploy on Heroku](https://img.shields.io/badge/deploy-heroku-663399.svg)](#deploy-to-heroku)
 
 > A tiny chaotic bot that replies to Twitter/X mentions by converting every vowel into **“i”** and randomizing capitalization.  
-> Pure silliness. Pure joy. 🎲💬
+> Pure silliness, Pure joy🎲💬
 
 ---
 
@@ -144,9 +143,7 @@ heroku ps:scale worker=0
 
 ## 📸 Screenshot
 
-```
-example.png
-```
+![banner](example.png)
 
 ---
 
